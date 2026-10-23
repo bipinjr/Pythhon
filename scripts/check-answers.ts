@@ -21,6 +21,7 @@ const cases: [string, string][] = [
   ["what does break do", "while-break-continue"],
   ["what is a dictionry", "dicts"],
   ["classmethod vs staticmethod", "classmethod-staticmethod"],
+  ["what is a constructor", "oop"],
 ];
 
 const ids = new Set<string>();
@@ -202,11 +203,15 @@ for (const [q, id] of cases) {
     console.log(`FAIL "${q}" -> ${a.entryId ?? "fallback"} (${a.confidence}), expected ${id}`);
   }
 }
-assert.equal(
-  answerQuestion("weather in paris tomorrow").matched,
-  false,
-  "nonsense should fall back",
-);
+for (const q of [
+  "weather in paris tomorrow",
+  "weather in paris",
+  "who won the world cup",
+  "best pizza in rome",
+  "how to cook rice",
+]) {
+  assert.equal(answerQuestion(q).matched, false, `off-topic "${q}" should fall back`);
+}
 assert.ok(autocomplete("revers").length > 0, "autocomplete finds prefixes");
 
 const t = performance.now();

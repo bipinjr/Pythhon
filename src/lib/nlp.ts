@@ -296,7 +296,8 @@ export function findAnswer(question: string, weights: LearnedWeight[] = []): Mat
       if (df.has(t) || STOPWORDS.has(t) || Object.hasOwn(SYNONYMS, t)) return sum + 1;
       const fixed = rawTokens[i]!;
       if (fixed === t) return sum;
-      return sum + (editDistance(t, fixed, 2) <= 1 ? 0.8 : 0.4);
+      // Short words snap to the wrong term too easily ("paris" -> "pairs"), so trust their fixes less.
+      return sum + (editDistance(t, fixed, 2) <= 1 && t.length > 5 ? 0.8 : 0.4);
     }, 0) / Math.max(1, original.length);
   const evidence = 0.35 + 0.65 * coverage;
   // Understand everyday phrasing by expanding to knowledge-base vocabulary.
@@ -353,7 +354,8 @@ export function findAnswer(question: string, weights: LearnedWeight[] = []): Mat
   const top = scored[0];
   const confidence = top ? Math.min(0.99, Math.round(top.score * 100) / 100) : 0;
 
-  if (!top || confidence < CONFIDENCE_THRESHOLD) {
+  // Mostly unrecognised words means the question isn't about Python: refuse rather than guess.
+  if (!top || confidence < CONFIDENCE_THRESHOLD || coverage < 0.5) {
     return {
       matched: false,
       confidence,

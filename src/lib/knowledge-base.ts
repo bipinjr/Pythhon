@@ -225,6 +225,7 @@ const coreKnowledge: KbEntry[] = [
     id: "oop",
     topic: "OOP basics",
     questions: [
+      "What is a constructor in Python?",
       "What is a class in Python?",
       "How does object oriented programming work in Python?",
       "What is __init__ and self?",
