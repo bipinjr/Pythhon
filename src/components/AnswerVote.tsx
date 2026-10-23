@@ -1,24 +1,43 @@
-import { useState } from 'react';
-import { useServerFn } from '@tanstack/react-start';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { voteOnAnswer } from '@/lib/feedback.functions';
+import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { useState } from "react";
 
-export function AnswerVote({ receipt }: { receipt: string }) {
-  const submit = useServerFn(voteOnAnswer);
-  const [vote, setVote] = useState<number>();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
-  async function rate(value: 1 | -1) {
-    if (pending || vote) return;
-    setPending(true); setError(false);
-    try { await submit({ data: { receipt, vote: value } }); setVote(value); }
-    catch { setError(true); }
-    finally { setPending(false); }
+import { recordVote } from "@/lib/answer";
+
+/** Votes tune ranking for this browser only (stored locally, no account needed). */
+export function AnswerVote({ question, entryId }: { question: string; entryId: string }) {
+  const [vote, setVote] = useState<1 | -1>();
+  function rate(value: 1 | -1) {
+    if (vote) return;
+    recordVote(question, entryId, value);
+    setVote(value);
   }
-  return <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-line pt-2">
-    <Button variant="ghost" size="icon" aria-label="Helpful answer" title="Helpful answer" aria-pressed={vote === 1} disabled={pending || !!vote} className={vote === 1 ? 'text-brand' : 'text-subtle'} onClick={() => void rate(1)}><ThumbsUp /></Button>
-    <Button variant="ghost" size="icon" aria-label="Unhelpful answer" title="Unhelpful answer" aria-pressed={vote === -1} disabled={pending || !!vote} className={vote === -1 ? 'text-brand' : 'text-subtle'} onClick={() => void rate(-1)}><ThumbsDown /></Button>
-    <span role="status" className="text-xs text-subtle">{pending ? 'Saving…' : vote ? 'Thanks for your feedback' : error ? 'Vote not saved. Try again.' : ''}</span>
-  </div>;
+  const btn =
+    "inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-line-soft hover:text-brand disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-brand";
+  return (
+    <div className="flex items-center gap-1 text-subtle">
+      <span className="mr-1 text-xs">
+        {vote ? (vote === 1 ? "Thanks — noted." : "Got it, I'll rank this lower.") : "Helpful?"}
+      </span>
+      <button
+        type="button"
+        aria-label="Helpful answer"
+        aria-pressed={vote === 1}
+        disabled={!!vote}
+        className={`${btn} ${vote === 1 ? "text-brand" : ""}`}
+        onClick={() => rate(1)}
+      >
+        <ThumbsUp className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        aria-label="Unhelpful answer"
+        aria-pressed={vote === -1}
+        disabled={!!vote}
+        className={`${btn} ${vote === -1 ? "text-brand" : ""}`}
+        onClick={() => rate(-1)}
+      >
+        <ThumbsDown className="size-3.5" />
+      </button>
+    </div>
+  );
 }

@@ -1,15 +1,103 @@
 import { knowledgeBase, type KbEntry } from "./knowledge-base";
-import { expandTokens } from "./synonyms";
+import { expandTokens, SYNONYMS } from "./synonyms";
 
 const STOPWORDS = new Set([
-  "a","an","the","is","are","was","were","be","been","being","do","does","did","doing",
-  "i","you","he","she","it","we","they","me","my","your","our","their","this","that",
-  "these","those","of","in","on","at","to","for","with","about","as","by","from","into",
-  "and","or","but","if","then","than","so","not","no","can","could","should","would",
-  "will","shall","may","might","must","have","has","had","get","got","use","using",
-  "please","tell","explain","what","whats","which","who","whom","when","where","why",
-  "how","there","here","some","any","all","up","out","between","difference","work",
-  "works","mean","means","python","py","question","help",
+  "a",
+  "an",
+  "the",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "do",
+  "does",
+  "did",
+  "doing",
+  "i",
+  "you",
+  "he",
+  "she",
+  "it",
+  "we",
+  "they",
+  "me",
+  "my",
+  "your",
+  "our",
+  "their",
+  "this",
+  "that",
+  "these",
+  "those",
+  "of",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "with",
+  "about",
+  "as",
+  "by",
+  "from",
+  "into",
+  "and",
+  "or",
+  "but",
+  "if",
+  "then",
+  "than",
+  "so",
+  "not",
+  "no",
+  "can",
+  "could",
+  "should",
+  "would",
+  "will",
+  "shall",
+  "may",
+  "might",
+  "must",
+  "have",
+  "has",
+  "had",
+  "get",
+  "got",
+  "use",
+  "using",
+  "please",
+  "tell",
+  "explain",
+  "what",
+  "whats",
+  "which",
+  "who",
+  "whom",
+  "when",
+  "where",
+  "why",
+  "how",
+  "there",
+  "here",
+  "some",
+  "any",
+  "all",
+  "up",
+  "out",
+  "between",
+  "difference",
+  "work",
+  "works",
+  "mean",
+  "means",
+  "python",
+  "py",
+  "question",
+  "help",
 ]);
 
 // Very small suffix stemmer: enough to fold plurals and common verb forms.
@@ -110,14 +198,21 @@ function bestPhraseOverlap(queryTokens: string[], entry: KbEntry): number {
 
 /** Character trigrams — gives typo tolerance ("dictionry", "funtion"). */
 function trigrams(text: string): Set<string> {
-  const s = ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+  const s = ` ${text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()} `;
   const out = new Set<string>();
   for (let i = 0; i < s.length - 2; i += 1) out.add(s.slice(i, i + 3));
   return out;
 }
 
 const docTrigrams = docs.map((doc) =>
-  trigrams([doc.entry.questions.join(" "), doc.entry.topic, (doc.entry.keywords ?? []).join(" ")].join(" ")),
+  trigrams(
+    [doc.entry.questions.join(" "), doc.entry.topic, (doc.entry.keywords ?? []).join(" ")].join(
+      " ",
+    ),
+  ),
 );
 
 function trigramSimilarity(a: Set<string>, b: Set<string>): number {
@@ -181,7 +276,18 @@ export const CONFIDENCE_THRESHOLD = 0.2;
 export type LearnedWeight = { entry_id: string; token: string; weight: number };
 
 export function findAnswer(question: string, weights: LearnedWeight[] = []): MatchResult {
-  const rawTokens = tokenize(question).map(correctToken);
+  const original = tokenize(question);
+  const rawTokens = original.map(correctToken);
+  // Share of words the knowledge base actually knows; far-fetched typo fixes count less,
+  // so off-topic questions ("weather in paris") can't ride on snapped words.
+  const coverage =
+    original.reduce((sum, t, i) => {
+      if (df.has(t) || SYNONYMS[t]) return sum + 1;
+      const fixed = rawTokens[i]!;
+      if (fixed === t) return sum;
+      return sum + (editDistance(t, fixed, 2) <= 1 ? 0.8 : 0.4);
+    }, 0) / Math.max(1, original.length);
+  const evidence = 0.35 + 0.65 * coverage;
   // Understand everyday phrasing by expanding to knowledge-base vocabulary.
   const queryTokens = expandTokens(rawTokens);
   const qtf = new Map<string, number>();
@@ -204,12 +310,18 @@ export function findAnswer(question: string, weights: LearnedWeight[] = []): Mat
       // Blend corpus similarity, direct phrasing overlap, and typo tolerance.
       const base = 0.55 * sim + 0.3 * overlap + 0.15 * fuzzy;
       const topicTerms = new Set(tokenize(doc.entry.topic));
-      const topic = queryTokens.filter(t => topicTerms.has(t)).length / Math.max(1, queryTokens.length);
-      const relevant = weights.filter(w => w.entry_id === doc.entry.id && rawTokens.includes(w.token));
-      const learned = relevant.reduce((sum, w) => sum + Math.max(-5, Math.min(5, w.weight)), 0) / Math.max(1, new Set(rawTokens).size);
+      const topic =
+        queryTokens.filter((t) => topicTerms.has(t)).length / Math.max(1, queryTokens.length);
+      const relevant = weights.filter(
+        (w) => w.entry_id === doc.entry.id && rawTokens.includes(w.token),
+      );
+      const learned =
+        relevant.reduce((sum, w) => sum + Math.max(-5, Math.min(5, w.weight)), 0) /
+        Math.max(1, new Set(rawTokens).size);
       // Feedback cannot rescue an unrelated candidate or overwhelm retrieval evidence.
-      const adjustment = base >= CONFIDENCE_THRESHOLD ? Math.max(-0.08, Math.min(0.08, learned * 0.016)) : 0;
-      const score = base + 0.1 * topic + adjustment;
+      const adjustment =
+        base >= CONFIDENCE_THRESHOLD ? Math.max(-0.08, Math.min(0.08, learned * 0.016)) : 0;
+      const score = (base + 0.1 * topic) * evidence + adjustment;
       return { entry: doc.entry, score };
     })
     .sort((a, b) => b.score - a.score);

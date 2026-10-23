@@ -1,4 +1,33 @@
-# Python Pal
+# PyQuery — Python Pal
+
+Ask Python questions in plain English and get instant answers with copyable code, from a curated knowledge base of 123 entries. No sign-up, no external AI, works on phone and desktop.
+
+## Run it
+
+```sh
+npm install
+npm run dev            # dev server (URL printed in the terminal)
+npm run check:answers  # matcher self-check: routing, fallback, speed
+npm run build          # production build
+```
+
+## Features
+
+- **Instant answers**: matching runs in the browser (TF-IDF + phrase overlap + typo tolerance), about 2 ms per question, no network round trip.
+- **Honest fallback**: off-topic questions get "I don't know" plus suggestions instead of a guess.
+- **Type-ahead**: stored questions that match appear as you type; arrow keys and Enter to pick.
+- **Topic index**: browse and filter every topic (sidebar on desktop, drawer on mobile).
+- **Related questions** after each answer, a **copy button** on code, inline `code` in answers.
+- **Learns from votes**: thumbs up/down nudges ranking for your browser (stored locally).
+- **Saved history**, **light/dark theme**, `/` to focus the prompt, reduced-motion support.
+
+## Where things live
+
+- `src/lib/knowledge-base*.ts`: the Q&A data. Add an entry with `id`, `topic`, `questions`, `keywords`, `answer` and optional `code`, then run `npm run check:answers`.
+- `src/lib/nlp.ts`: the matcher. `src/lib/answer.ts`: answers, type-ahead, topic list, local vote learning.
+- `src/routes/index.tsx`: the UI.
+
+---
 
 # Product Requirements Document (PRD)
 

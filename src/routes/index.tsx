@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { BookOpen, Moon, RotateCcw, Search, Sun } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import { AnswerVote } from "@/components/AnswerVote";
 import { CodeBlock } from "@/components/CodeBlock";
-import { askQuestion } from "@/lib/ask.functions";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { answerQuestion, autocomplete, learnedWeights, topics, type Answer } from "@/lib/answer";
+import { knowledgeBase } from "@/lib/knowledge-base";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -15,13 +17,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Ask Python questions in plain English and get instant answers from a curated Python knowledge base. No sign-up, works on any device.",
+          "Ask Python questions in plain English and get instant answers with runnable examples from a curated Python knowledge base. No sign-up, works on any device.",
       },
       { property: "og:title", content: "PyQuery — Personal Python Answer Engine" },
       {
         property: "og:description",
         content:
-          "Ask Python questions in plain English and get instant answers from a curated Python knowledge base. No sign-up required.",
+          "Ask Python questions in plain English and get instant answers. No sign-up required.",
       },
     ],
   }),
@@ -30,258 +32,430 @@ export const Route = createFileRoute("/")({
 
 type Message =
   | { id: string; role: "user"; text: string }
-  | {
-      id: string;
-      role: "bot";
-      text: string;
-      topic?: string | undefined;
-      code?: string | undefined;
-      confidence?: number | undefined;
-      chips?: string[] | undefined;
-      error?: boolean | undefined;
-      receipt?: string | undefined;
-    };
+  | { id: string; role: "bot"; question: string; answer: Answer };
 
-const STARTER_CHIPS = [
-  "What is a list?",
-  "How do functions work?",
-  "Explain a dictionary",
-];
-
-const SAMPLE_QUESTIONS = [
+const HISTORY_KEY = "pyquery.history.v1";
+const STARTERS = [
+  "How do I reverse a list?",
+  "What is a decorator?",
+  "How do f-strings work?",
   "How do I handle exceptions?",
-  "List vs tuple?",
-  "What is a list comprehension?",
-  "How do I read a file?",
   "What is __init__ and self?",
-  "How do imports work?",
+  "How do I read a JSON file?",
 ];
 
-const welcome = (): Message => ({
-  id: "welcome",
-  role: "bot",
-  text: "Hi! I'm PyQuery. Ask me anything about Python — variables, loops, OOP, files, and more. Here are a few to start:",
-  chips: STARTER_CHIPS,
-});
+let seq = 0;
+const nextId = () => `${Date.now().toString(36)}-${(seq += 1)}`;
 
 function ChatPage() {
-  const ask = useServerFn(askQuestion);
-  const [messages, setMessages] = useState<Message[]>([welcome()]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [pending, setPending] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
+  const [dark, setDark] = useState(false);
+  const [topicsOpen, setTopicsOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Restore history + theme after hydration (localStorage is browser-only).
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages, pending]);
+    setDark(document.documentElement.classList.contains("dark"));
+    try {
+      const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]") as Message[];
+      if (Array.isArray(saved)) setMessages(saved);
+    } catch {
+      /* corrupt or blocked storage: start fresh */
+    }
+    setLoaded(true);
+  }, []);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [pending]);
+    if (!loaded) return; // don't overwrite saved history before it's restored
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-60)));
+    } catch {
+      /* storage blocked: history just won't persist */
+    }
+    const el = scrollRef.current;
+    if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }));
+  }, [messages, loaded]);
 
-  async function send(question: string) {
+  // "/" focuses the prompt from anywhere, like a search box.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(target.tagName)) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const completions = useMemo(() => autocomplete(input), [input]);
+
+  function ask(question: string) {
     const text = question.trim();
-    if (!text || pending) return;
-    setInput("");
-    setPending(true);
+    if (!text) return;
+    const answer = answerQuestion(text, learnedWeights());
     setMessages((prev) => [
       ...prev,
-      { id: `u-${Date.now()}`, role: "user", text },
+      { id: nextId(), role: "user", text },
+      { id: nextId(), role: "bot", question: text, answer },
     ]);
-
-    try {
-      const res = await ask({ data: { question: text } });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `b-${Date.now()}`,
-          role: "bot",
-          text: res.answer,
-          receipt: res.receipt,
-          topic: res.topic,
-          code: res.code,
-          confidence: res.matched ? res.confidence : undefined,
-          chips: res.matched ? undefined : res.suggestions,
-        },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `e-${Date.now()}`,
-          role: "bot",
-          text: "I couldn't reach the answer service just now. Check your connection and try asking again.",
-          error: true,
-        },
-      ]);
-    } finally {
-      setPending(false);
-    }
+    setInput("");
+    setHighlight(-1);
+    setTopicsOpen(false);
+    inputRef.current?.focus();
   }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    void send(input);
+    ask(highlight >= 0 && completions[highlight] ? completions[highlight] : input);
   }
 
+  function onInputKey(e: KeyboardEvent<HTMLInputElement>) {
+    if (!completions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % completions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => (h <= 0 ? completions.length - 1 : h - 1));
+    } else if (e.key === "Escape") {
+      setHighlight(-1);
+      setInput("");
+    }
+  }
+
+  function toggleTheme() {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    try {
+      localStorage.setItem("pyquery.theme", next ? "dark" : "light");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const topicIndex = <TopicIndex onAsk={ask} />;
+
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
-      <header className="bg-surface">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1">
-              <span className="size-3 rounded-full bg-brand" />
-              <span className="size-3 rounded-full bg-accent-warm" />
-              <span className="size-3 rounded-full bg-faint" />
-            </div>
-            <div>
-              <h1 className="font-display text-lg font-bold leading-none">PyQuery</h1>
-              <p className="mt-1 text-xs text-subtle">Your personal Python answer engine</p>
-            </div>
+    <div className="flex h-dvh flex-col bg-paper text-ink">
+      <header className="shrink-0 border-b border-line bg-surface">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex items-baseline gap-3">
+            <h1 className="font-display text-xl font-extrabold tracking-tight">
+              <span className="font-mono text-accent-warm" aria-hidden>
+                &gt;&gt;&gt;
+              </span>{" "}
+              pyquery
+            </h1>
+            <p className="hidden text-sm text-subtle sm:block">
+              Python answers from {knowledgeBase.length} curated entries
+            </p>
           </div>
-          <div className="hidden items-center gap-2 sm:flex">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-faint">
-              No sign-up needed
-            </span>
-            <span className="size-2 rounded-full bg-online" />
+          <div className="flex items-center gap-1">
+            <Sheet open={topicsOpen} onOpenChange={setTopicsOpen}>
+              <SheetTrigger asChild>
+                <button type="button" className={`${iconBtn} lg:hidden`} aria-label="Browse topics">
+                  <BookOpen className="size-4" />
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="w-[85vw] max-w-sm overflow-y-auto border-line bg-surface p-0"
+              >
+                <SheetHeader className="border-b border-line px-4 py-3">
+                  <SheetTitle className="font-display text-ink">Browse topics</SheetTitle>
+                </SheetHeader>
+                {topicIndex}
+              </SheetContent>
+            </Sheet>
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMessages([])}
+                className={iconBtn}
+                aria-label="Clear conversation"
+                title="Clear conversation"
+              >
+                <RotateCcw className="size-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={iconBtn}
+              aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
           </div>
         </div>
       </header>
-      <div className="dotted-rule h-px" />
 
-      <main className="flex flex-1 items-center justify-center p-4">
-        <div className="flex h-[72vh] max-h-[760px] min-h-[520px] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
-          <div className="flex items-center justify-between border-b border-line-soft px-5 py-3">
-            <span className="text-xs font-medium text-subtle">Conversation</span>
-            <button
-              type="button"
-              onClick={() => setMessages([welcome()])}
-              className="text-xs font-medium text-faint transition-colors hover:text-brand"
-            >
-              Clear chat
-            </button>
-          </div>
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1">
+        <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-line lg:block">
+          {topicIndex}
+        </aside>
 
-          <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-            {messages.map((m) =>
-              m.role === "user" ? (
-                <div key={m.id} className="msg-enter flex justify-end">
-                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-brand px-4 py-3">
-                    <p className="text-sm text-primary-foreground">{m.text}</p>
-                  </div>
-                </div>
+        <main className="flex min-w-0 flex-1 flex-col">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto" aria-live="polite">
+            <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8">
+              {messages.length === 0 ? (
+                <Welcome onAsk={ask} />
               ) : (
-                <div key={m.id} className="msg-enter flex items-start gap-3">
-                  {m.id !== "welcome" && (
-                    <div className="flex shrink-0 flex-col items-center gap-1 pt-1">
-                      <span className="size-2.5 rounded-full bg-brand" />
-                      <span className="size-2.5 rounded-full bg-accent-warm" />
-                    </div>
-                  )}
-                  <div className="max-w-[80%] rounded-2xl rounded-tl-sm border border-line-soft bg-line-soft/60 px-4 py-3">
-                    {(m.topic || typeof m.confidence === "number") && (
-                      <div className="mb-2 flex items-center gap-3">
-                        {m.topic && (
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-brand">
-                            {m.topic}
-                          </span>
-                        )}
-                        {typeof m.confidence === "number" && (
-                          <span className="text-[10px] font-medium text-faint">
-                            {Math.round(m.confidence * 100)}% match
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <p
-                      className={`text-sm leading-relaxed ${m.error ? "text-destructive" : "text-body"}`}
-                    >
-                      {m.text}
-                    </p>
-                    {m.code && <CodeBlock code={m.code} />}
-                    {m.receipt && <AnswerVote receipt={m.receipt} />}
-                    {m.chips && m.chips.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {m.chips.map((chip) => (
-                          <button
-                            key={chip}
-                            type="button"
-                            onClick={() => void send(chip)}
-                            className="rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-medium text-body transition-colors hover:border-brand hover:text-brand"
-                          >
-                            {chip}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ),
-            )}
-
-            {pending && (
-              <div className="msg-enter flex items-start gap-3">
-                <div className="flex shrink-0 flex-col items-center gap-1 pt-1">
-                  <span className="size-2.5 rounded-full bg-brand" />
-                  <span className="size-2.5 rounded-full bg-accent-warm" />
-                </div>
-                <div className="flex items-center gap-2 rounded-2xl rounded-tl-sm border border-line-soft bg-line-soft/60 px-4 py-3.5">
-                  <span className="dot-pulse size-1.5 rounded-full bg-faint" />
-                  <span
-                    className="dot-pulse size-1.5 rounded-full bg-faint"
-                    style={{ animationDelay: "0.15s" }}
-                  />
-                  <span
-                    className="dot-pulse size-1.5 rounded-full bg-faint"
-                    style={{ animationDelay: "0.3s" }}
-                  />
-                  <span className="ml-1 text-xs text-subtle">searching the knowledge base…</span>
-                </div>
-              </div>
-            )}
+                <ol className="space-y-6">
+                  {messages.map((m) => (
+                    <li key={m.id} className="msg-enter">
+                      {m.role === "user" ? (
+                        <p className="font-mono text-[15px] text-ink">
+                          <span className="mr-2 select-none text-accent-warm">&gt;&gt;&gt;</span>
+                          {m.text}
+                        </p>
+                      ) : (
+                        <AnswerCell question={m.question} answer={m.answer} onAsk={ask} />
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
           </div>
 
-          <div className="border-t border-line-soft p-3">
-            <div className="mb-2 flex flex-wrap gap-2 px-1">
-              {SAMPLE_QUESTIONS.map((q) => (
+          <div className="shrink-0 border-t border-line bg-surface/80 backdrop-blur">
+            <form onSubmit={onSubmit} className="relative mx-auto max-w-3xl px-4 py-3 sm:px-8">
+              {completions.length > 0 && (
+                <ul
+                  role="listbox"
+                  aria-label="Matching questions"
+                  className="msg-enter absolute inset-x-4 bottom-full mb-2 overflow-hidden rounded-lg border border-line bg-surface shadow-lg sm:inset-x-8"
+                >
+                  {completions.map((c, i) => (
+                    <li key={c} role="option" aria-selected={i === highlight}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => ask(c)}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${i === highlight ? "bg-line-soft text-brand" : "text-body hover:bg-line-soft"}`}
+                      >
+                        <Search className="size-3.5 shrink-0 text-faint" />
+                        {c}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <label className="flex items-center gap-3 rounded-lg border border-line bg-paper px-3 py-2.5 transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+                <span
+                  className="select-none font-mono text-sm font-bold text-accent-warm"
+                  aria-hidden
+                >
+                  &gt;&gt;&gt;
+                </span>
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setHighlight(-1);
+                  }}
+                  onKeyDown={onInputKey}
+                  maxLength={500}
+                  autoComplete="off"
+                  placeholder="Ask a Python question…"
+                  aria-label="Ask a Python question"
+                  className="min-w-0 flex-1 bg-transparent font-mono text-sm text-ink outline-none placeholder:font-sans placeholder:text-faint"
+                />
+                <kbd className="hidden rounded border border-line px-1.5 font-mono text-[11px] text-faint sm:inline">
+                  /
+                </kbd>
                 <button
-                  key={q}
+                  type="submit"
+                  disabled={!input.trim()}
+                  className="rounded-md bg-brand px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-40 dark:text-paper"
+                >
+                  Ask
+                </button>
+              </label>
+            </form>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+const iconBtn =
+  "inline-flex size-9 items-center justify-center rounded-md text-subtle transition-colors hover:bg-line-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand";
+
+function Welcome({ onAsk }: { onAsk: (q: string) => void }) {
+  return (
+    <div className="pt-6 sm:pt-14">
+      <h2 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-6xl">
+        Ask Python
+        <br />
+        anything<span className="caret-blink text-accent-warm">_</span>
+      </h2>
+      <p className="mt-5 max-w-xl text-base leading-relaxed text-body">
+        Plain-English questions, straight answers with code you can copy. Everything runs in your
+        browser — no sign-up, no waiting, and it never makes things up: if it doesn't know, it says
+        so.
+      </p>
+      <div className="mt-8 grid gap-2 sm:grid-cols-2">
+        {STARTERS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => onAsk(q)}
+            className="group flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-left text-sm text-body transition-colors hover:border-brand hover:text-ink"
+          >
+            <span className="font-mono text-faint transition-colors group-hover:text-accent-warm">
+              &gt;&gt;&gt;
+            </span>
+            {q}
+          </button>
+        ))}
+      </div>
+      <p className="mt-6 text-sm text-subtle">
+        Tip: press <kbd className="rounded border border-line px-1 font-mono text-xs">/</kbd> to
+        jump to the prompt, or browse every topic in the index.
+      </p>
+    </div>
+  );
+}
+
+/** Renders `inline code` spans inside answer prose. */
+function Prose({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(`[^`]+`)/g).map((part, i) =>
+        part.startsWith("`") && part.endsWith("`") ? (
+          <code
+            key={i}
+            className="rounded bg-line-soft px-1 py-0.5 font-mono text-[0.9em] text-ink"
+          >
+            {part.slice(1, -1)}
+          </code>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function AnswerCell({
+  question,
+  answer,
+  onAsk,
+}: {
+  question: string;
+  answer: Answer;
+  onAsk: (q: string) => void;
+}) {
+  const pct = Math.round(answer.confidence * 100);
+  return (
+    <article
+      className={`rounded-xl border bg-surface p-4 sm:p-5 ${answer.matched ? "border-line" : "border-dashed border-accent-warm/70"}`}
+    >
+      {answer.matched && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="font-mono text-xs text-subtle"># {answer.topic}</span>
+          <span
+            className="flex items-center gap-2 text-xs text-faint"
+            title="How closely your question matched the stored one"
+          >
+            <span className="h-1 w-16 overflow-hidden rounded-full bg-line-soft">
+              <span className="block h-full rounded-full bg-online" style={{ width: `${pct}%` }} />
+            </span>
+            {pct}% match
+          </span>
+        </div>
+      )}
+      <p className="text-[15px] leading-relaxed text-body">
+        <Prose text={answer.answer} />
+      </p>
+      {answer.code && <CodeBlock code={answer.code} />}
+      {answer.suggestions.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-subtle">{answer.matched ? "Related:" : "Try:"}</span>
+          {answer.suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onAsk(s)}
+              className="rounded-full border border-line px-3 py-1 text-xs text-body transition-colors hover:border-brand hover:text-brand"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+      {answer.matched && answer.entryId && (
+        <div className="mt-4 flex justify-end border-t border-line-soft pt-3">
+          <AnswerVote question={question} entryId={answer.entryId} />
+        </div>
+      )}
+    </article>
+  );
+}
+
+function TopicIndex({ onAsk }: { onAsk: (q: string) => void }) {
+  const [filter, setFilter] = useState("");
+  const shown = useMemo(() => {
+    const f = filter.trim().toLowerCase();
+    if (!f) return topics;
+    return topics
+      .map((t) => ({
+        ...t,
+        questions: t.name.toLowerCase().includes(f)
+          ? t.questions
+          : t.questions.filter((q) => q.toLowerCase().includes(f)),
+      }))
+      .filter((t) => t.questions.length > 0);
+  }, [filter]);
+
+  return (
+    <nav aria-label="Topics" className="p-3">
+      <input
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter topics…"
+        aria-label="Filter topics"
+        className="mb-3 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-faint focus:border-brand"
+      />
+      {shown.length === 0 && (
+        <p className="px-2 text-sm text-subtle">No topic matches “{filter}”.</p>
+      )}
+      {shown.map((t) => (
+        <details
+          key={t.name}
+          open={!!filter.trim()}
+          className="group border-b border-line-soft last:border-0"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-md px-2 py-2 text-sm font-semibold text-ink hover:bg-line-soft [&::-webkit-details-marker]:hidden">
+            {t.name}
+            <span className="font-mono text-xs font-normal text-faint">{t.questions.length}</span>
+          </summary>
+          <ul className="mb-2 space-y-0.5 pl-2">
+            {t.questions.map((q) => (
+              <li key={q}>
+                <button
                   type="button"
-                  onClick={() => void send(q)}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-medium text-body transition-colors hover:border-brand hover:text-brand"
+                  onClick={() => onAsk(q)}
+                  className="w-full rounded px-2 py-1.5 text-left text-[13px] leading-snug text-body transition-colors hover:bg-line-soft hover:text-brand"
                 >
                   {q}
                 </button>
-              ))}
-            </div>
-            <form
-              onSubmit={onSubmit}
-              className="flex items-center gap-2 rounded-xl border border-line bg-line-soft px-3 py-2 transition-colors focus-within:border-brand"
-            >
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                type="text"
-                placeholder="Ask a Python question…"
-                aria-label="Ask a Python question"
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
-              />
-              <button
-                type="submit"
-                disabled={pending || !input.trim()}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-brand-hover disabled:opacity-40"
-              >
-                Send
-              </button>
-            </form>
-          </div>
-        </div>
-      </main>
-    </div>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </nav>
   );
 }

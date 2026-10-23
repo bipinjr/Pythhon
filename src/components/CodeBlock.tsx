@@ -1,7 +1,44 @@
+import { Check, Copy } from "lucide-react";
+import { useState } from "react";
+
 const KEYWORDS = new Set([
-  "if","elif","else","for","while","in","not","and","or","def","return","class",
-  "try","except","finally","raise","with","as","import","from","lambda","None",
-  "True","False","is","pass","break","continue","print","yield","global","del",
+  "if",
+  "elif",
+  "else",
+  "for",
+  "while",
+  "in",
+  "not",
+  "and",
+  "or",
+  "def",
+  "return",
+  "class",
+  "try",
+  "except",
+  "finally",
+  "raise",
+  "with",
+  "as",
+  "import",
+  "from",
+  "lambda",
+  "None",
+  "True",
+  "False",
+  "is",
+  "pass",
+  "break",
+  "continue",
+  "yield",
+  "global",
+  "del",
+  "async",
+  "await",
+  "match",
+  "case",
+  "nonlocal",
+  "assert",
 ]);
 
 type Token = { text: string; kind: "kw" | "num" | "str" | "comment" | "plain" };
@@ -38,23 +75,36 @@ function tokenizeLine(line: string): Token[] {
 }
 
 const classFor: Record<Token["kind"], string> = {
-  kw: "text-brand",
-  num: "text-accent-warm",
-  str: "text-online",
-  comment: "text-subtle",
+  kw: "text-[#7fb6f0]",
+  num: "text-[#f5cd4a]",
+  str: "text-[#8fd6a8]",
+  comment: "text-[#7d8ca3] italic",
   plain: "",
 };
 
 export function CodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked (http or permissions): leave the button as is */
+    }
+  }
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-line">
-      <div className="flex items-center gap-2 bg-ink px-3 py-2">
-        <span className="size-2 rounded-full bg-accent-warm" />
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
-          example
-        </span>
-      </div>
-      <pre className="overflow-x-auto bg-line-soft px-3 py-2.5 font-mono text-xs leading-relaxed">
+    <div className="group relative mt-4 overflow-hidden rounded-lg bg-code-bg text-code-fg">
+      <button
+        type="button"
+        onClick={() => void copy()}
+        aria-label={copied ? "Copied" : "Copy code"}
+        className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[11px] font-medium text-code-fg opacity-80 transition hover:bg-white/20 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-accent-warm"
+      >
+        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <pre className="overflow-x-auto px-4 py-3.5 pr-20 font-mono text-[12.5px] leading-relaxed">
         <code>
           {code.split("\n").map((line, i) => (
             <span key={i}>
