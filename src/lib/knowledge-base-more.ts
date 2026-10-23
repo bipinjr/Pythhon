@@ -192,8 +192,8 @@ export const moreKnowledge: KbEntry[] = [
     id: "merge-sort-dicts",
     topic: "Dictionaries",
     questions: [
-      "How do I merge two dictionaries?",
       "How do I sort a dictionary by value?",
+      "How do I combine two dictionaries with |?",
       "How do I invert a dictionary?",
     ],
     keywords: ["merge", "combine", "update", "sort", "value", "invert", "|"],

@@ -12,7 +12,7 @@ const cases: [string, string][] = [
   ["fibonacci series program", "fibonacci"],
   ["is 17 a prime number how to check", "prime-numbers"],
   ["difference between append and extend", "list-methods"],
-  ["merge two dicts", "merge-sort-dicts"],
+  ["sort dict by value", "merge-sort-dicts"],
   ["what is a dataclass", "dataclasses"],
   ["NoneType object has no attribute", "error-attribute"],
   ["ModuleNotFoundError no module named requests", "error-module-not-found"],
@@ -28,6 +28,10 @@ for (const e of knowledgeBase) {
   assert.ok(!ids.has(e.id), `duplicate id ${e.id}`);
   ids.add(e.id);
 }
+
+// Topic index uses each entry's first question as a React key, so they must be unique.
+const firsts = knowledgeBase.map((e) => e.questions[0]);
+assert.equal(new Set(firsts).size, firsts.length, "duplicate first question");
 
 let failed = 0;
 for (const [q, id] of cases) {
