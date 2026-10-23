@@ -2,11 +2,158 @@ import type { KbEntry } from "./knowledge-base";
 
 /** Deeper coverage: stdlib specifics, OOP extras, specific errors, data tools and classic exercises. */
 export const moreKnowledge: KbEntry[] = [
+  // ---------- Everyday list and string operations ----------
+  {
+    id: "list-everyday",
+    topic: "Lists",
+    questions: [
+      "How do I merge two lists?",
+      "How do I get the length of a list?",
+      "How do I check if an item is in a list?",
+      "How do I get the last item of a list?",
+      "What is negative indexing?",
+    ],
+    keywords: [
+      "merge",
+      "concatenate",
+      "combine",
+      "length",
+      "len",
+      "contains",
+      "in",
+      "last",
+      "negative",
+      "index",
+    ],
+    answer:
+      "Join two lists with + (makes a new list) or a.extend(b) (changes a in place). len(items) gives the number of items, and `x in items` checks membership. Negative indexes count from the end: items[-1] is the last item, items[-2] the one before.",
+    code: "a = [1, 2]\nb = [3, 4]\nmerged = a + b      # [1, 2, 3, 4]\nlen(merged)         # 4\n3 in merged         # True\nmerged[-1]          # 4 (last item)\nmerged[-2]          # 3",
+  },
+  {
+    id: "string-search",
+    topic: "Strings",
+    questions: [
+      "How do I check if a string contains a substring?",
+      "How do I find the position of a word in a string?",
+      "How do I check if a string starts with something?",
+      "How do I count characters in a string?",
+    ],
+    keywords: [
+      "contains",
+      "substring",
+      "in",
+      "find",
+      "index",
+      "startswith",
+      "endswith",
+      "count",
+      "search",
+    ],
+    answer:
+      "Use the `in` operator to test whether text appears in a string. find() returns the position of the first match (or -1), index() does the same but raises ValueError if missing. startswith() and endswith() check the edges, and count() counts occurrences. All are case-sensitive, so lower() both sides for a case-insensitive check.",
+    code: 'text = "Hello Python"\n"Python" in text          # True\ntext.find("Py")           # 6\ntext.startswith("Hell")   # True\ntext.count("o")           # 2\n"python" in text.lower()  # case-insensitive',
+  },
+  {
+    id: "packages-init",
+    topic: "Modules and imports",
+    questions: [
+      "What is __init__.py?",
+      "What is a package in Python?",
+      "How do I organise code into folders?",
+      "What is a relative import?",
+    ],
+    keywords: ["package", "__init__", "init.py", "folder", "relative", "import"],
+    answer:
+      "A module is one .py file; a package is a folder of modules. An __init__.py file marks the folder as a regular package and runs when the package is first imported, so you can use it to expose a tidy public API. Inside a package, relative imports like `from .utils import helper` refer to sibling modules.",
+    code: "myapp/\n    __init__.py        # makes myapp a package\n    utils.py\n    models/\n        __init__.py\n        user.py\n\n# in myapp/models/user.py\nfrom ..utils import slugify\n\n# elsewhere\nfrom myapp.models.user import User",
+  },
+  {
+    id: "exit-program",
+    topic: "Getting started",
+    questions: [
+      "How do I exit a Python program?",
+      "What does sys.exit do?",
+      "How do I stop a script early?",
+    ],
+    keywords: ["exit", "quit", "stop", "sys.exit", "terminate", "end"],
+    answer:
+      "Call sys.exit() to stop a program. Pass 0 (or nothing) for success and a non-zero number or an error message for failure — other programs and shells read that exit code. Inside a function, a plain return is often all you need. exit() and quit() exist too but are meant for the interactive shell.",
+    code: 'import sys\n\nif len(sys.argv) < 2:\n    sys.exit("usage: python app.py <file>")   # prints message, exit code 1\n\nsys.exit(0)   # success',
+  },
+  // ---------- Data structures and algorithms ----------
+  {
+    id: "stack-queue",
+    topic: "Data structures",
+    questions: [
+      "What is a stack?",
+      "What is a queue?",
+      "How do I implement a stack in Python?",
+      "How do I implement a queue in Python?",
+    ],
+    keywords: ["stack", "queue", "lifo", "fifo", "push", "pop", "deque", "enqueue"],
+    answer:
+      "A stack is last-in, first-out (LIFO): the last item added is the first removed, like a pile of plates. A plain list works: append() to push, pop() to pop. A queue is first-in, first-out (FIFO), like a line at a shop. Use collections.deque with append() and popleft(), because list.pop(0) is slow on long lists.",
+    code: "from collections import deque\n\nstack = []\nstack.append(1); stack.append(2)\nstack.pop()        # 2  (last in, first out)\n\nqueue = deque()\nqueue.append('a'); queue.append('b')\nqueue.popleft()    # 'a' (first in, first out)",
+  },
+  {
+    id: "linked-list",
+    topic: "Data structures",
+    questions: [
+      "How do I implement a linked list in Python?",
+      "What is a linked list?",
+      "What is a binary tree?",
+    ],
+    keywords: ["linked list", "node", "tree", "binary tree", "next", "pointer"],
+    answer:
+      "A linked list is a chain of nodes where each node stores a value and a reference to the next node. A binary tree is similar, but each node has a left and a right child. In Python you build both with a small class. Day to day, the built-in list and deque usually serve better — linked structures mostly appear in interviews and courses.",
+    code: "class Node:\n    def __init__(self, value, next=None):\n        self.value = value\n        self.next = next\n\nhead = Node(1, Node(2, Node(3)))\n\nnode = head\nwhile node:\n    print(node.value)   # 1 2 3\n    node = node.next",
+  },
+  {
+    id: "binary-search",
+    topic: "Algorithms",
+    questions: [
+      "How does binary search work?",
+      "Write a binary search in Python",
+      "What is the bisect module?",
+    ],
+    keywords: ["binary search", "bisect", "search", "sorted", "halve"],
+    answer:
+      "Binary search finds an item in a sorted list by repeatedly checking the middle and discarding the half that can't contain it, so it needs only about log2(n) steps — 20 checks for a million items. The bisect module provides a ready-made, fast version.",
+    code: "def binary_search(items, target):\n    lo, hi = 0, len(items) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if items[mid] == target:\n            return mid\n        if items[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\nimport bisect\nbisect.bisect_left([1, 3, 5, 7], 5)   # 2",
+  },
+  {
+    id: "sorting-algorithms",
+    topic: "Algorithms",
+    questions: [
+      "How does bubble sort work?",
+      "Write a sorting algorithm in Python",
+      "What sorting algorithm does Python use?",
+    ],
+    keywords: ["bubble sort", "insertion sort", "merge sort", "quicksort", "algorithm", "timsort"],
+    answer:
+      "Bubble sort repeatedly swaps neighbouring items that are out of order until a full pass makes no swaps — easy to understand but O(n²). Python's own sorted() and list.sort() use Timsort, a fast, stable O(n log n) algorithm, so use those in real code.",
+    code: "def bubble_sort(items):\n    items = list(items)\n    for end in range(len(items) - 1, 0, -1):\n        swapped = False\n        for i in range(end):\n            if items[i] > items[i + 1]:\n                items[i], items[i + 1] = items[i + 1], items[i]\n                swapped = True\n        if not swapped:\n            break\n    return items\n\nbubble_sort([5, 2, 9, 1])   # [1, 2, 5, 9]",
+  },
+  {
+    id: "big-o",
+    topic: "Algorithms",
+    questions: [
+      "What is Big O notation?",
+      "What is time complexity?",
+      "Which is faster, a list or a set lookup?",
+    ],
+    keywords: ["big o", "complexity", "time complexity", "o(n)", "o(1)", "efficient", "lookup"],
+    answer:
+      "Big O describes how the work grows as the input grows. O(1) is constant, O(log n) grows slowly (binary search), O(n) grows in step with the input (a loop), and O(n²) grows fast (a loop inside a loop). In Python, `x in a_list` is O(n) but `x in a_set` or `key in a_dict` is O(1) on average — switch to a set when you check membership often.",
+    code: "items = list(range(1_000_000))\nlookup = set(items)\n\n999_999 in items    # O(n): scans the list\n999_999 in lookup   # O(1): hash lookup, much faster",
+  },
   // ---------- Strings and formatting ----------
   {
     id: "fstrings-format",
     topic: "Strings",
     questions: [
+      "What is an f string?",
+      "What is an f-string?",
       "How do f-strings work?",
       "How do I format a number to 2 decimal places?",
       "How do I format strings in Python?",
@@ -128,12 +275,15 @@ export const moreKnowledge: KbEntry[] = [
     id: "math-operators",
     topic: "Operators",
     questions: [
+      "How do I use the math module?",
+      "What math functions does Python have?",
+      "What is the math module?",
       "What is the difference between / and //?",
       "How does the modulo operator work?",
       "How do I raise a number to a power?",
       "How do I round a number?",
     ],
-    keywords: ["division", "floor", "modulo", "remainder", "power", "exponent", "round"],
+    keywords: ["math", "division", "floor", "modulo", "remainder", "power", "exponent", "round"],
     answer:
       "/ always returns a float, // is floor division, % gives the remainder, and ** raises to a power. round(x, n) rounds to n digits using banker's rounding (ties go to the even number), so round(2.5) is 2. For a whole number in both directions use math.floor and math.ceil.",
     code: "7 / 2      # 3.5\n7 // 2     # 3\n7 % 2      # 1\n2 ** 10    # 1024\nround(3.14159, 2)   # 3.14\nround(2.5)          # 2\nimport math; math.ceil(2.1)   # 3",
@@ -371,6 +521,7 @@ export const moreKnowledge: KbEntry[] = [
     id: "abstract-mro",
     topic: "OOP basics",
     questions: [
+      "What is abstraction in Python?",
       "What is an abstract class in Python?",
       "Does Python support multiple inheritance?",
       "What is MRO?",
@@ -506,6 +657,7 @@ export const moreKnowledge: KbEntry[] = [
     id: "json",
     topic: "Working with data",
     questions: [
+      "What is JSON?",
       "How do I read a JSON file?",
       "How do I convert a dictionary to JSON?",
       "How do I parse a JSON string?",
@@ -578,6 +730,7 @@ export const moreKnowledge: KbEntry[] = [
     id: "timing-code",
     topic: "Performance",
     questions: [
+      "How do I sleep in Python?",
       "How do I measure how long code takes?",
       "How do I pause a program for a few seconds?",
       "How do I use timeit?",

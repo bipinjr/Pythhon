@@ -47,6 +47,7 @@ export const extraKnowledge: KbEntry[] = [
     id: "strings-methods",
     topic: "Strings",
     questions: [
+      "How do I make a string uppercase?",
       "What string methods are there?",
       "How do I split a string?",
       "How do I remove whitespace from a string?",
@@ -95,7 +96,7 @@ export const extraKnowledge: KbEntry[] = [
     keywords: ["else", "nested", "break", "continue", "pass", "infinite"],
     answer:
       "A loop's else block runs only if the loop finished without hitting break — handy for search loops. Nested loops are just loops inside loops; break only exits the innermost one. Use pass as a placeholder for an empty block.",
-    code: "for n in nums:\n    if n == target:\n        print(\"found\")\n        break\nelse:\n    print(\"not found\")",
+    code: 'for n in nums:\n    if n == target:\n        print("found")\n        break\nelse:\n    print("not found")',
   },
   {
     id: "sorting",
@@ -149,7 +150,7 @@ export const extraKnowledge: KbEntry[] = [
     keywords: ["decorator", "wrapper", "property", "staticmethod", "classmethod", "at"],
     answer:
       "A decorator is a function that takes a function and returns a replacement, applied with @name above a def. It is how you add logging, timing, or caching without editing the original body. Built-in ones include @property, @staticmethod, @classmethod, and functools.lru_cache.",
-    code: "import functools\n\ndef logged(fn):\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        print(\"calling\", fn.__name__)\n        return fn(*args, **kwargs)\n    return wrapper\n\n@logged\ndef add(a, b):\n    return a + b",
+    code: 'import functools\n\ndef logged(fn):\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        print("calling", fn.__name__)\n        return fn(*args, **kwargs)\n    return wrapper\n\n@logged\ndef add(a, b):\n    return a + b',
   },
   {
     id: "scope",
@@ -177,7 +178,7 @@ export const extraKnowledge: KbEntry[] = [
     keywords: ["dunder", "magic", "str", "repr", "eq", "len", "dataclass"],
     answer:
       "Dunder (double underscore) methods hook your class into Python syntax: __str__ for print, __repr__ for debugging, __eq__ for ==, __len__ for len(), __iter__ for looping. @dataclass generates __init__, __repr__, and __eq__ for you.",
-    code: 'from dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: int\n    y: int\n\nprint(Point(1, 2))   # Point(x=1, y=2)',
+    code: "from dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: int\n    y: int\n\nprint(Point(1, 2))   # Point(x=1, y=2)",
   },
   {
     id: "oop-encapsulation",
@@ -190,7 +191,7 @@ export const extraKnowledge: KbEntry[] = [
     ],
     keywords: ["private", "encapsulation", "polymorphism", "abstract", "underscore", "interface"],
     answer:
-      "Python has no true private members: a single underscore means \"internal by convention\" and a double underscore triggers name mangling. Polymorphism comes from duck typing — if an object has the method, it works. For formal interfaces use abc.ABC with @abstractmethod.",
+      'Python has no true private members: a single underscore means "internal by convention" and a double underscore triggers name mangling. Polymorphism comes from duck typing — if an object has the method, it works. For formal interfaces use abc.ABC with @abstractmethod.',
     code: "from abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): ...\n\nclass Square(Shape):\n    def __init__(self, s): self._s = s\n    def area(self): return self._s ** 2",
   },
   {
@@ -224,6 +225,7 @@ export const extraKnowledge: KbEntry[] = [
     id: "virtualenv-packages",
     topic: "Environments and packaging",
     questions: [
+      "How do I install a package?",
       "What is a virtual environment?",
       "What is requirements.txt?",
       "How do I manage dependencies?",
@@ -324,7 +326,7 @@ export const extraKnowledge: KbEntry[] = [
     keywords: ["unpack", "star", "asterisk", "positional", "keyword", "spread"],
     answer:
       "In a call, *seq spreads a sequence into positional arguments and **d spreads a dict into keyword arguments — the mirror image of *args/**kwargs in a definition. Positional arguments match by order; keyword arguments match by name and must come last.",
-    code: "def area(w, h):\n    return w * h\n\ndims = (3, 4)\narea(*dims)\nkw = {\"w\": 3, \"h\": 4}\narea(**kw)",
+    code: 'def area(w, h):\n    return w * h\n\ndims = (3, 4)\narea(*dims)\nkw = {"w": 3, "h": 4}\narea(**kw)',
   },
   {
     id: "files-paths",
@@ -364,7 +366,7 @@ export const extraKnowledge: KbEntry[] = [
     keywords: ["enumerate", "zip", "index", "pair", "parallel"],
     answer:
       "enumerate(items, start=0) yields (index, item) pairs, so you never need a manual counter. zip(a, b) walks several sequences in lockstep and stops at the shortest one; zip(*pairs) unzips them again.",
-    code: 'for i, name in enumerate(names, start=1):\n    print(i, name)\n\nfor name, score in zip(names, scores):\n    print(name, score)',
+    code: "for i, name in enumerate(names, start=1):\n    print(i, name)\n\nfor name, score in zip(names, scores):\n    print(name, score)",
   },
   {
     id: "truthiness-none",
@@ -376,7 +378,7 @@ export const extraKnowledge: KbEntry[] = [
     ],
     keywords: ["none", "null", "falsy", "truthy", "empty", "check"],
     answer:
-      "None is Python's \"no value\" object; check it with is None. Falsy values are None, False, 0, 0.0, \"\", [], {}, set(), and (). So `if not items:` is the idiomatic empty check, and `if items:` means non-empty.",
+      'None is Python\'s "no value" object; check it with is None. Falsy values are None, False, 0, 0.0, "", [], {}, set(), and (). So `if not items:` is the idiomatic empty check, and `if items:` means non-empty.',
     code: 'items = []\nif not items:\n    print("empty")\n\nvalue = None\nif value is None:\n    print("missing")',
   },
   {
@@ -417,6 +419,6 @@ export const extraKnowledge: KbEntry[] = [
     keywords: ["with", "context", "enter", "exit", "contextlib", "resource"],
     answer:
       "A context manager guarantees setup and cleanup around a block. Any object with __enter__ and __exit__ works with `with`, and contextlib.contextmanager turns a generator into one. Files, locks, and database connections all use this pattern.",
-    code: "from contextlib import contextmanager\n\n@contextmanager\ndef timer():\n    import time\n    start = time.time()\n    yield\n    print(\"took\", time.time() - start)\n\nwith timer():\n    heavy_work()",
+    code: 'from contextlib import contextmanager\n\n@contextmanager\ndef timer():\n    import time\n    start = time.time()\n    yield\n    print("took", time.time() - start)\n\nwith timer():\n    heavy_work()',
   },
 ];

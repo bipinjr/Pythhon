@@ -275,14 +275,25 @@ export const CONFIDENCE_THRESHOLD = 0.2;
 
 export type LearnedWeight = { entry_id: string; token: string; weight: number };
 
+const normalize = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, " ")
+    .trim();
+/** Every stored phrasing, so asking a listed question word-for-word always hits its entry. */
+const exactPhrases = new Map<string, KbEntry>();
+for (const doc of docs)
+  for (const q of doc.entry.questions) exactPhrases.set(normalize(q), doc.entry);
+
 export function findAnswer(question: string, weights: LearnedWeight[] = []): MatchResult {
+  const exact = exactPhrases.get(normalize(question));
   const original = tokenize(question);
   const rawTokens = original.map(correctToken);
   // Share of words the knowledge base actually knows; far-fetched typo fixes count less,
   // so off-topic questions ("weather in paris") can't ride on snapped words.
   const coverage =
     original.reduce((sum, t, i) => {
-      if (df.has(t) || SYNONYMS[t]) return sum + 1;
+      if (df.has(t) || STOPWORDS.has(t) || Object.hasOwn(SYNONYMS, t)) return sum + 1;
       const fixed = rawTokens[i]!;
       if (fixed === t) return sum;
       return sum + (editDistance(t, fixed, 2) <= 1 ? 0.8 : 0.4);
@@ -325,6 +336,19 @@ export function findAnswer(question: string, weights: LearnedWeight[] = []): Mat
       return { entry: doc.entry, score };
     })
     .sort((a, b) => b.score - a.score);
+
+  if (exact) {
+    return {
+      matched: true,
+      confidence: 0.99,
+      entry: exact,
+      suggestions: scored
+        .filter((x) => x.entry.id !== exact.id && x.score > 0.12)
+        .slice(0, 2)
+        .map((x) => x.entry.questions[0])
+        .filter((q): q is string => Boolean(q)),
+    };
+  }
 
   const top = scored[0];
   const confidence = top ? Math.min(0.99, Math.round(top.score * 100) / 100) : 0;

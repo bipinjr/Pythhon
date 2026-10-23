@@ -12,7 +12,7 @@ export type Answer = {
 };
 
 const FALLBACK =
-  "I don't have a confident match for that, so I won't guess. I cover Python from first steps to intermediate: syntax, data types, collections, loops, functions, OOP, modules, errors, files, the standard library, data tools and classic exercises. Try rephrasing, or pick one of these:";
+  "I only answer from my Python knowledge base, so I won't guess. Try rephrasing, or pick one of these:";
 
 // Matching runs in the browser: the knowledge base is static, so answers are instant and work offline.
 export function answerQuestion(question: string, weights: LearnedWeight[] = []): Answer {
@@ -43,18 +43,7 @@ export function answerQuestion(question: string, weights: LearnedWeight[] = []):
   };
 }
 
-/** Topics with their questions, in knowledge-base order, for the browse panel. */
-export const topics: { name: string; questions: string[] }[] = (() => {
-  const map = new Map<string, string[]>();
-  for (const e of knowledgeBase) {
-    const first = e.questions[0];
-    if (!first) continue;
-    map.set(e.topic, [...(map.get(e.topic) ?? []), first]);
-  }
-  return [...map].map(([name, questions]) => ({ name, questions }));
-})();
-
-const allQuestions = knowledgeBase.flatMap((e) => e.questions);
+const allQuestions = [...new Set(knowledgeBase.flatMap((e) => e.questions))];
 
 /** Type-ahead: stored questions containing every typed word prefix. */
 export function autocomplete(text: string, limit = 5): string[] {

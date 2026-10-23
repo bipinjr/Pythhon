@@ -5,7 +5,7 @@
 PyQuery is a website where you type a Python question in plain English, like *"how do I reverse a list?"*, and instantly get a short explanation plus example code you can copy.
 
 - **No sign-up.** Open the page and start asking.
-- **No AI service behind it.** Answers come from a hand-written knowledge base of **123 Python topics**, so it never invents answers.
+- **No AI service behind it.** Answers come from a hand-written knowledge base of **132 Python topics** (over 440 ways of asking), so it never invents answers.
 - **Honest.** If your question isn't covered, it says so and suggests questions it can answer.
 - **Fast.** Answers appear in about 2 milliseconds, because everything runs inside your browser.
 - **Works everywhere.** Phone, tablet or desktop, in light or dark mode.
@@ -16,13 +16,12 @@ PyQuery is a website where you type a Python question in plain English, like *"h
 
 | You want to… | Do this |
 | --- | --- |
-| Ask a question | Type it in the box at the bottom (it starts with `>>>`, like the Python prompt) and press **Enter** or **Ask**. |
-| Get help phrasing it | Start typing. Matching questions pop up above the box; pick one with the **↑ ↓** keys and **Enter**, or click it. |
-| Browse what it knows | Use the **topic list** (left sidebar on desktop, the 📖 book button on mobile). Type in *Filter topics…* to search it. |
+| Ask a question | Type it in the big box and press **Enter** or the ↑ button. Or tap one of the four example cards on the start screen. |
+| Get help phrasing it | Start typing. Matching questions pop up next to the box; pick one with the **↑ ↓** keys and **Enter**, or click it. |
 | Copy example code | Click **Copy** on any code block. |
 | Explore further | Click a **Related** question under an answer. |
 | Teach it | Click 👍 or 👎 under an answer. Your votes push good answers higher next time (saved in your browser only). |
-| Start over | Click the ↺ button at the top. |
+| Start over | Click **New chat** (or the PyQuery logo) at the top. |
 | Switch theme | Click the ☀/☾ button at the top. |
 | Jump to the box | Press **/** anywhere on the page. |
 
@@ -92,7 +91,7 @@ Each entry looks like this:
 ```ts
 {
   id: "fibonacci",                         // unique name
-  topic: "Classic programs",               // groups it in the topic list
+  topic: "Classic programs",               // label shown above the answer
   questions: [                             // different ways people ask it
     "How do I print the Fibonacci sequence?",
     "Write a Fibonacci program in Python",
@@ -103,21 +102,22 @@ Each entry looks like this:
 }
 ```
 
-After editing, run `npm run check:answers` to confirm nothing broke. Each entry's first question must be unique because it's what the topic list shows.
+After editing, run `npm run check:answers` to confirm nothing broke. Each entry's first question must be unique, because it's shown as a suggestion button. The self-test also checks that every stored question, plus 145 common beginner questions, gets an answer.
 
 ## Project structure
 
 ```
 src/
-  routes/index.tsx        the page: chat, input box, topic list, theme
+  routes/index.tsx        the page: start screen, chat, input box, theme
   components/
     CodeBlock.tsx         code display with syntax colours and a Copy button
     AnswerVote.tsx        the 👍 / 👎 buttons
+    Logo.tsx              the PyQuery logo (also public/favicon.svg)
   lib/
     knowledge-base*.ts    the questions and answers
     nlp.ts                the matching engine (steps 1–6 above)
     synonyms.ts           everyday-word expansions
-    answer.ts             turns a match into an answer; type-ahead, topic list, vote storage
+    answer.ts             turns a match into an answer; type-ahead, vote storage
 scripts/check-answers.ts  the self-test
 ```
 

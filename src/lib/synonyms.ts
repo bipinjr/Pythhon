@@ -170,7 +170,8 @@ export const SYNONYMS: Record<string, string[]> = {
 export function expandTokens(tokens: string[]): string[] {
   const out = [...tokens];
   for (const t of tokens) {
-    const extra = SYNONYMS[t] ?? SYNONYMS[t.replace(/e$/, "")] ?? SYNONYMS[`${t}e`];
+    const syn = (k: string) => (Object.hasOwn(SYNONYMS, k) ? SYNONYMS[k] : undefined); // avoid Object.prototype keys like "constructor"
+    const extra = syn(t) ?? syn(t.replace(/e$/, "")) ?? syn(`${t}e`);
     if (extra) out.push(...extra);
   }
   return out;

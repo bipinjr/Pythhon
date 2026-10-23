@@ -15,11 +15,7 @@ const coreKnowledge: KbEntry[] = [
   {
     id: "basics-what-is-python",
     topic: "Python basics",
-    questions: [
-      "What is Python?",
-      "Why should I learn Python?",
-      "What is Python used for?",
-    ],
+    questions: ["What is Python?", "Why should I learn Python?", "What is Python used for?"],
     keywords: ["language", "interpreted", "beginner"],
     answer:
       "Python is a high-level, interpreted programming language known for readable syntax and a huge standard library. It is widely used for scripting, web backends, data analysis, automation, and machine learning. Code runs line by line, so you can experiment quickly in an interactive shell.",
@@ -42,14 +38,16 @@ const coreKnowledge: KbEntry[] = [
     id: "basics-indentation",
     topic: "Python basics",
     questions: [
+      "How do I fix an indentation error?",
+      "How do I fix an IndentationError?",
       "Why does Python care about indentation?",
       "What is an IndentationError?",
       "How much should I indent?",
     ],
-    keywords: ["indent", "whitespace", "block"],
+    keywords: ["indentation", "indentationerror", "fix", "error", "indent", "whitespace", "block"],
     answer:
       "Python uses indentation instead of braces to define blocks. Every line in the same block must be indented by the same amount — the convention is 4 spaces. Mixing tabs and spaces raises a TabError or IndentationError.",
-    code: "if score > 50:\n    print(\"pass\")\nelse:\n    print(\"retry\")",
+    code: 'if score > 50:\n    print("pass")\nelse:\n    print("retry")',
   },
   {
     id: "variables",
@@ -62,7 +60,7 @@ const coreKnowledge: KbEntry[] = [
     keywords: ["variable", "assign", "name", "declare"],
     answer:
       "A variable is a name bound to a value. You create one just by assigning — no type declaration needed, because Python is dynamically typed. Names are case sensitive and by convention use lower_snake_case.",
-    code: "count = 10\nname = \"Ada\"\nprice = 19.99\ncount = \"now a string\"  # rebinding is allowed",
+    code: 'count = 10\nname = "Ada"\nprice = 19.99\ncount = "now a string"  # rebinding is allowed',
   },
   {
     id: "datatypes",
@@ -75,7 +73,7 @@ const coreKnowledge: KbEntry[] = [
     keywords: ["type", "int", "float", "str", "bool", "none"],
     answer:
       "The core built-in types are int, float, complex, str, bool, NoneType, plus the containers list, tuple, dict, and set. Use type(value) to inspect a type and isinstance(value, T) to test one.",
-    code: 'type(3)          # <class \'int\'>\ntype(3.0)        # <class \'float\'>\nisinstance("a", str)  # True',
+    code: "type(3)          # <class 'int'>\ntype(3.0)        # <class 'float'>\nisinstance(\"a\", str)  # True",
   },
   {
     id: "datatypes-casting",
@@ -100,21 +98,22 @@ const coreKnowledge: KbEntry[] = [
     ],
     keywords: ["string", "format", "fstring", "concat", "join"],
     answer:
-      "f-strings are the modern way to build strings: prefix the literal with f and put expressions inside braces. For joining a sequence of strings use \"sep\".join(items), which is far faster than repeated + concatenation.",
+      'f-strings are the modern way to build strings: prefix the literal with f and put expressions inside braces. For joining a sequence of strings use "sep".join(items), which is far faster than repeated + concatenation.',
     code: 'name = "Ada"\nprint(f"Hello {name}, you are {2026 - 1815} years old")\nprint(", ".join(["a", "b", "c"]))',
   },
   {
     id: "lists",
     topic: "Lists",
     questions: [
+      "How do I make a list?",
       "What is a list in Python?",
       "How do I create a list?",
       "How do I add or remove items from a list?",
     ],
-    keywords: ["list", "append", "remove", "mutable", "index"],
+    keywords: ["make", "create", "new", "list", "append", "remove", "mutable", "index"],
     answer:
       "A list is an ordered, mutable sequence written with square brackets. Index from 0, use negative indexes from the end, and slice with [start:stop]. Common methods are append, extend, insert, remove, pop, and sort.",
-    code: 'nums = [3, 1, 2]\nnums.append(4)     # [3, 1, 2, 4]\nnums.sort()        # [1, 2, 3, 4]\nnums[0], nums[-1]  # (1, 4)\nnums[1:3]          # [2, 3]',
+    code: "nums = [3, 1, 2]\nnums.append(4)     # [3, 1, 2, 4]\nnums.sort()        # [1, 2, 3, 4]\nnums[0], nums[-1]  # (1, 4)\nnums[1:3]          # [2, 3]",
   },
   {
     id: "lists-reverse",
@@ -172,6 +171,7 @@ const coreKnowledge: KbEntry[] = [
     id: "conditionals",
     topic: "Conditionals",
     questions: [
+      "How do I write if else in Python?",
       "How do if statements work in Python?",
       "What is elif?",
       "Does Python have a ternary operator?",
@@ -198,6 +198,7 @@ const coreKnowledge: KbEntry[] = [
     id: "functions",
     topic: "Functions",
     questions: [
+      "What does return do?",
       "How do functions work in Python?",
       "How do I define a function?",
       "What are default arguments and *args / **kwargs?",
@@ -256,7 +257,7 @@ const coreKnowledge: KbEntry[] = [
     ],
     keywords: ["import", "module", "package", "from", "main"],
     answer:
-      "Any .py file is a module. Import the whole module with import math, or specific names with from math import sqrt. Your own files import by filename from the same folder. The if __name__ == \"__main__\": guard runs code only when the file is executed directly, not when it is imported.",
+      'Any .py file is a module. Import the whole module with import math, or specific names with from math import sqrt. Your own files import by filename from the same folder. The if __name__ == "__main__": guard runs code only when the file is executed directly, not when it is imported.',
     code: 'import math\nfrom math import sqrt as square_root\nimport helpers          # helpers.py next door\n\nif __name__ == "__main__":\n    main()',
   },
   {
@@ -282,16 +283,13 @@ const coreKnowledge: KbEntry[] = [
     ],
     keywords: ["file", "open", "read", "write", "with", "close"],
     answer:
-      "Use open() inside a with block so the file closes automatically, even if an error occurs. Mode \"r\" reads, \"w\" overwrites, \"a\" appends. Iterating over the file object reads it line by line without loading the whole file into memory.",
+      'Use open() inside a with block so the file closes automatically, even if an error occurs. Mode "r" reads, "w" overwrites, "a" appends. Iterating over the file object reads it line by line without loading the whole file into memory.',
     code: 'with open("notes.txt", "r", encoding="utf-8") as f:\n    for line in f:\n        print(line.rstrip())\n\nwith open("out.txt", "w", encoding="utf-8") as f:\n    f.write("hello\\n")',
   },
   {
     id: "files-csv",
     topic: "File handling",
-    questions: [
-      "How do I read a CSV file?",
-      "How to work with JSON in Python?",
-    ],
+    questions: ["How do I read a CSV file?", "How to work with JSON in Python?"],
     keywords: ["csv", "json", "load", "dump", "reader"],
     answer:
       "The standard library covers both formats: csv.DictReader gives you each row as a dictionary, and the json module converts between Python objects and JSON text with load/loads and dump/dumps.",
@@ -339,10 +337,7 @@ const coreKnowledge: KbEntry[] = [
   {
     id: "errors-equality",
     topic: "Common errors",
-    questions: [
-      "What is the difference between == and is?",
-      "Should I use is to compare strings?",
-    ],
+    questions: ["What is the difference between == and is?", "Should I use is to compare strings?"],
     keywords: ["equality", "identity", "is", "==", "compare"],
     answer:
       "== compares values, while is compares identity — whether two names point to the same object in memory. Use == for values and reserve is for singletons like None, True, and False.",
